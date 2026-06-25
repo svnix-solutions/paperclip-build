@@ -20,9 +20,10 @@ Paperclip server). The image is **not** built at deploy time.
 | `.env.example` | Environment template (local use + reference for Komodo). |
 | `komodo/resources.toml` | **Resource Sync** — Build + Stack + release Procedure, as code. |
 
-The server binds to `127.0.0.1:3100` by default and is meant to sit behind a
-reverse proxy (Cloudflare Tunnel, Nginx, Caddy, or Traefik). Data lives in named
-Docker volumes `pgdata` and `paperclip-data`.
+The server listens on container port `3100` (published on an ephemeral host
+port) and is meant to sit behind a reverse proxy (Cloudflare Tunnel, Nginx,
+Caddy, or Traefik). Data lives in named Docker volumes `pgdata` and
+`paperclip-data`.
 
 ### Image flow
 
@@ -79,7 +80,8 @@ Docker volumes `pgdata` and `paperclip-data`.
    ```
    (Container name may differ — check `docker ps`; project name is `paperclip`.)
 
-7. **Reverse proxy** your `PAPERCLIP_PUBLIC_URL` to `127.0.0.1:3100` on the server.
+7. **Reverse proxy** your `PAPERCLIP_PUBLIC_URL` to the server's `3100` (reach it
+   over the `paperclip` network or the published host port — see `docker ps`).
 
 ### Updates
 To ship a new version: bump `version` in the Build (or push to `main`) and run
@@ -109,5 +111,4 @@ docker compose logs -f server
 | `POSTGRES_PASSWORD` | ✅ | `openssl rand -hex 16` |
 | `ANTHROPIC_API_KEY` | – | Optional Claude integration |
 | `OPENAI_API_KEY` | – | Optional OpenAI integration |
-| `SERVER_BIND` | – | Default `127.0.0.1:3100` |
 | `USER_UID` / `USER_GID` | – | Default `1000` |
