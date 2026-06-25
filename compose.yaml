@@ -1,0 +1,93 @@
+# =============================================================================
+# Paperclip AI — Komodo Stack
+# Managed by Komodo (https://komo.do). The `server` image is built ahead of time
+# by a Komodo BUILD resource and pushed to a registry (see komodo/resources.toml).
+# On deploy, Komodo's Periphery agent pulls ${PAPERCLIP_IMAGE} and runs
+# `docker compose up -d` — no build happens at deploy time.
+#
+# Environment variables are injected by Komodo from the Stack's "Environment"
+# field. For local/manual use, copy .env.example to .env
+# =============================================================================
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Komodo Stack environment}
+      POSTGRES_DB: paperclip
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+    networks:
+      - paperclip
+
+  server:
+    # Pre-built and pushed by the Komodo Build resource. e.g.
+    #   ghcr.io/<owner>/paperclip-server:latest
+    image: ${PAPERCLIP_IMAGE:?Set PAPERCLIP_IMAGE to the image built by Komodo}
+    init: true
+    restart: unless-stopped
+    ports:
+      # Bound to loopback only — put a reverse proxy (Cloudflare Tunnel / Nginx /
+      # Caddy / Traefik) in front of this. Override SERVER_BIND to expose elsewhere.
+      - "${SERVER_BIND:-127.0.0.1:3100}:3100"
+    environment:
+      DATABASE_URL: postgres://paperclip:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Komodo Stack environment}@db:5432/paperclip
+      PORT: "3100"
+      HOST: "0.0.0.0"
+      SERVE_UI: "true"
+      NODE_ENV: production
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
+      PAPERCLIP_PUBLIC_URL: "${PAPERCLIP_PUBLIC_URL}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?Generate with: openssl rand -hex 32}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      USER_UID: "${USER_UID:-1000}"
+      USER_GID: "${USER_GID:-1000}"
+    volumes:
+      - paperclip-data:/paperclip
+    depends_on:
+      db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 4096
+    shm_size: 256m
+    tmpfs:
+      - /tmp:size=1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3100/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - paperclip
+
+networks:
+  paperclip:
+    driver: bridge
+
+volumes:
+  pgdata:
+  paperclip-data:
