@@ -49,7 +49,7 @@ services:
     ports:
       # Bound to loopback only — put a reverse proxy (Cloudflare Tunnel / Nginx /
       # Caddy / Traefik) in front of this. Override SERVER_BIND to expose elsewhere.
-      - "${SERVER_BIND:-127.0.0.1:3100}:3100"
+      - "3100"
     environment:
       DATABASE_URL: postgres://paperclip:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Komodo Stack environment}@db:5432/paperclip
       PORT: "3100"
