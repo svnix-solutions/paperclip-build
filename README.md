@@ -81,7 +81,7 @@ Caddy, or Traefik). Data lives in named Docker volumes `pgdata` and
    (Container name may differ — check `docker ps`; project name is `paperclip`.)
 
 7. **Reverse proxy** your `PAPERCLIP_PUBLIC_URL` to the server's `3100` (reach it
-   over the `paperclip` network or the published host port — see `docker ps`).
+   over the project's default network or the published host port — see `docker ps`).
 
 ### Updates
 To ship a new version: bump `version` in the Build (or push to `main`) and run
