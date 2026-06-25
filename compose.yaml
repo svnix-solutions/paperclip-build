@@ -37,6 +37,8 @@ services:
     tmpfs:
       - /tmp
       - /run/postgresql
+    networks:
+      - paperclip
 
   server:
     # Pre-built and pushed by the Komodo Build resource. e.g.
@@ -47,7 +49,7 @@ services:
     ports:
       # Container port 3100 published on an ephemeral host port. Put a reverse
       # proxy (Cloudflare Tunnel / Nginx / Caddy / Traefik) in front; it can reach
-      # the server over the project's default network or this published port.
+      # the server over the `paperclip` network or this published port.
       - "3100"
     environment:
       DATABASE_URL: postgres://paperclip:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the Komodo Stack environment}@db:5432/paperclip
@@ -80,6 +82,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    networks:
+      - paperclip
+      - cloudflared
+
+networks:
+  paperclip:
+  cloudflared:
+    external: true
 
 volumes:
   pgdata:
