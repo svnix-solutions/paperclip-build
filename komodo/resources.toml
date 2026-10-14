@@ -7,6 +7,7 @@
 # `komodo/resources.toml` (or the `komodo` folder) and Execute it.
 #
 # Image flow:
+#   ghcr.io/paperclipai/paperclip (official) ──FROM──▶
 #   [[build]] paperclip-server  ──build & push──▶  <registry>/<owner>/paperclip-server:latest
 #   [[stack]] paperclip         ──pull & run──▶    compose.yaml (image: ${PAPERCLIP_IMAGE})
 #   [[procedure]] paperclip-release  chains: build → deploy stack
@@ -20,11 +21,13 @@
 # =============================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BUILD — compiles the image from the Dockerfile and pushes it to a registry.
+# BUILD — layers the Dockerfile on the official upstream image and pushes it.
+# Upstream builds Core (UI, server, Rust runner, provider pack); this only
+# adds site-specific layers, so builds take seconds instead of many minutes.
 # ─────────────────────────────────────────────────────────────────────────────
 [[build]]
 name = "paperclip-server"
-description = "Build Paperclip AI server image from source and push to registry"
+description = "Build Paperclip AI server image on the official base and push to registry"
 tags = ["ai", "paperclip"]
 
 [build.config]
@@ -47,10 +50,11 @@ image_registry.account = "<registry-acct>"
 # Bump this to cut a new image version/tag:
 version = "0.1.0"
 
-# Passed to the Dockerfile ARGs:
+# Passed to the Dockerfile ARGs. Pin the base to a release tag (e.g.
+# ghcr.io/paperclipai/paperclip:2026.916.1) or a digest for reproducibility.
+# UID/GID are applied at runtime from USER_UID/USER_GID in the stack env.
 build_args = """
-USER_UID=1000
-USER_GID=1000
+PAPERCLIP_BASE_IMAGE=ghcr.io/paperclipai/paperclip:latest
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -97,6 +101,8 @@ BETTER_AUTH_SECRET=
 POSTGRES_PASSWORD=
 ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
+GEMINI_API_KEY=
+PAPERCLIP_ALLOWED_HOSTNAMES=
 USER_UID=1000
 USER_GID=1000
 """
