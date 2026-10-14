@@ -1,11 +1,3 @@
-.git
-.gitignore
-.env
-.env.*
-!.env.example
-data
-README.md
-CLAUDE.md
-LICENSE
-komodo
-*.md
+# The Dockerfile only builds FROM the upstream image; nothing is copied in.
+*
+!Dockerfile

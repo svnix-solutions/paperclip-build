@@ -41,11 +41,16 @@ services:
       - paperclip
 
   server:
-    # Pre-built and pushed by the Komodo Build resource. e.g.
+    # Pre-built and pushed by the Komodo Build resource (a thin layer on the
+    # official ghcr.io/paperclipai/paperclip image), e.g.
     #   ghcr.io/<owner>/paperclip-server:latest
+    # Or skip the Build and point this at the upstream image directly.
     image: ${PAPERCLIP_IMAGE:?Set PAPERCLIP_IMAGE to the image built by Komodo}
-    init: true
+    # No `init: true`: the image runs tini as PID 1 itself (upstream
+    # Dockerfile ENTRYPOINT). Adding docker-init would nest it around tini.
     restart: unless-stopped
+    # Covers the 30s adapter-settlement window plus final cleanup (upstream).
+    stop_grace_period: 90s
     ports:
       # Container port 3100 published on an ephemeral host port. Put a reverse
       # proxy (Cloudflare Tunnel / Nginx / Caddy / Traefik) in front; it can reach
@@ -63,6 +68,9 @@ services:
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?Generate with: openssl rand -hex 32}"
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      # Extra hostnames beyond the PAPERCLIP_PUBLIC_URL host (LAN/Tailscale aliases).
+      PAPERCLIP_ALLOWED_HOSTNAMES: "${PAPERCLIP_ALLOWED_HOSTNAMES:-}"
       USER_UID: "${USER_UID:-1000}"
       USER_GID: "${USER_GID:-1000}"
     volumes:
@@ -72,7 +80,8 @@ services:
         condition: service_healthy
     security_opt:
       - no-new-privileges:true
-    pids_limit: 4096
+    # Backstop against leaked agent processes (upstream default).
+    pids_limit: 2048
     shm_size: 256m
     tmpfs:
       - /tmp:size=1g
